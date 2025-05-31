@@ -9,6 +9,7 @@ console.log('FIREBASE_ADMIN_SDK_JSON:', process.env.FIREBASE_ADMIN_SDK_JSON ? 'V
 let serviceAccount;
 try {
   serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK_JSON);
+  serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
   console.log('JSON parse başarılı');
 } catch (e) {
   console.error('JSON parse hatası:', e);
