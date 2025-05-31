@@ -4,13 +4,22 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 require('dotenv').config();
 
+console.log('FIREBASE_ADMIN_SDK_JSON:', process.env.FIREBASE_ADMIN_SDK_JSON ? 'Var' : 'Yok');
+
+let serviceAccount;
+try {
+  serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK_JSON);
+  console.log('JSON parse başarılı');
+} catch (e) {
+  console.error('JSON parse hatası:', e);
+  process.exit(1); // JSON parse edilemezse serverı kapat
+}
+
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
 // Firebase Admin SDK başlatılıyor
-const serviceAccount = require(process.env.FIREBASE_ADMIN_SDK_PATH);
-
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
