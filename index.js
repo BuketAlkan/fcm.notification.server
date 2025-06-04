@@ -39,7 +39,7 @@ app.post('/sendNotification', async (req, res) => {
   }
 
   try {
-     let notificationTitle = "Yeni Bildirim";
+    let notificationTitle = "Yeni Bildirim";
     let notificationBody = "Etkileşim aldınız";
 
     if (data.type === 'chat') {
@@ -60,7 +60,6 @@ app.post('/sendNotification', async (req, res) => {
         body: notificationBody
       },
       data: data
-    };
     };
 
     const response = await messaging.send(message);
