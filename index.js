@@ -32,24 +32,20 @@ app.get('/', (req, res) => {
 
 // Bildirim gönderme endpointi
 app.post('/sendNotification', async (req, res) => {
-  const { token, title, body, data } = req.body;
+  const { token, data } = req.body;
 
-  if (!token || !title || !body) {
-    return res.status(400).send({ error: 'token, title ve body zorunludur.' });
+  if (!token || !data) {
+    return res.status(400).send({ error: 'Token ve data zorunludur' });
   }
 
-  const message = {
-    token: token,
-    notification: {
-      title: title,
-      body: body,
-    },
-    data: data || {},
-  };
-
   try {
+    // SADECE DATA PAYLOAD GÖNDER
+    const message = {
+      token: token,
+      data: data
+    };
+
     const response = await messaging.send(message);
-    console.log('Bildirim gönderildi:', response);
     res.send({ success: true, response });
   } catch (error) {
     console.error('Bildirim gönderme hatası:', error);
