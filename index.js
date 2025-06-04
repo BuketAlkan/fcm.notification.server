@@ -39,10 +39,28 @@ app.post('/sendNotification', async (req, res) => {
   }
 
   try {
-    // SADECE DATA PAYLOAD GÖNDER
+     let notificationTitle = "Yeni Bildirim";
+    let notificationBody = "Etkileşim aldınız";
+
+    if (data.type === 'chat') {
+      notificationTitle = data.senderName || "Yeni Mesaj";
+      notificationBody = data.content || "Mesajınız var";
+    } else if (data.type === 'forum_comment') {
+      notificationTitle = "Yeni Yorum";
+      notificationBody = `${data.senderName} gönderinize yorum yaptı`;
+    } else if (data.type === 'comment') {
+      notificationTitle = "Yeni Yorum";
+      notificationBody = `${data.senderName} yorum yaptı`;
+    }
+
     const message = {
       token: token,
+      notification: {
+        title: notificationTitle,
+        body: notificationBody
+      },
       data: data
+    };
     };
 
     const response = await messaging.send(message);
