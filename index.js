@@ -73,83 +73,83 @@ app.post('/sendNotification', async (req, res) => {
 // --- 1 gün öncesi ve gününde hatırlatma göndermek için cron job ---
 
 // Her gün saat 09:00'da çalışsın
-cron.schedule('0 9 * * *', async () => {
+cron.schedule('*/5 * * * *', async () => {
   console.log('Hatırlatıcı kontrolü başladı:', new Date());
 
   try {
     const now = new Date();
-    const oneDayLater = new Date(now);
-    oneDayLater.setDate(oneDayLater.getDate() + 1);
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0); // Bugünün başlangıcı (lokal saat)
 
-    // Timestamp olarak kullanmak için
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEnd = new Date(todayStart);
-    todayEnd.setDate(todayEnd.getDate() + 1);
+    // Tarih aralıkları için Timestamp oluştur
+    const oneDay = 24 * 60 * 60 * 1000;
+    const tomorrow = new Date(today.getTime() + oneDay);
+    const dayAfterTomorrow = new Date(today.getTime() + 2 * oneDay);
 
-    const tomorrowStart = new Date(oneDayLater.getFullYear(), oneDayLater.getMonth(), oneDayLater.getDate());
-    const tomorrowEnd = new Date(tomorrowStart);
-    tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+    // Firestore Timestamp nesneleri oluştur
+    const todayStart = admin.firestore.Timestamp.fromDate(today);
+    const todayEnd = admin.firestore.Timestamp.fromDate(new Date(today.getTime() + oneDay));
+    const tomorrowStart = admin.firestore.Timestamp.fromDate(tomorrow);
+    const tomorrowEnd = admin.firestore.Timestamp.fromDate(dayAfterTomorrow);
 
-    // 1 gün öncesi hatırlatma alacaklar
-    const snapshot1 = await firestore.collection('appointments')
-      .where('appointmentDate', '>=', tomorrowStart)
-      .where('appointmentDate', '<', tomorrowEnd)
-      .get();
-
-    // O gün hatırlatma alacaklar
-    const snapshot2 = await firestore.collection('appointments')
+    // Bugünkü randevular
+    const todaySnapshot = await firestore.collection('appointments')
       .where('appointmentDate', '>=', todayStart)
       .where('appointmentDate', '<', todayEnd)
       .get();
 
-    // İki listeyi birleştir
-    const docs = [...snapshot1.docs, ...snapshot2.docs];
+    // Yarınki randevular
+    const tomorrowSnapshot = await firestore.collection('appointments')
+      .where('appointmentDate', '>=', tomorrowStart)
+      .where('appointmentDate', '<', tomorrowEnd)
+      .get();
+
+    const docs = [...todaySnapshot.docs, ...tomorrowSnapshot.docs];
 
     for (const doc of docs) {
       const appointment = doc.data();
-
-      // Kullanıcının FCM token'ını al
       const userId = appointment.userId;
+
+      // Kullanıcıyı ve FCM token'ını al
       const userDoc = await firestore.collection('users').doc(userId).get();
       if (!userDoc.exists) continue;
 
-      const user = userDoc.data();
-      const fcmToken = user?.fcmToken;
-      if (!fcmToken) continue;
-
-      // Hangi gün hatırlatma olduğunu belirle
-      const apptDate = appointment.appointmentDate.toDate();
-      let daysLeft = Math.floor((apptDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-      let title = 'Veteriner Randevusu Hatırlatması';
-      let body = '';
-
-      if (daysLeft === 1) {
-        body = `Yarın "${appointment.note}" randevunuz var.`;
-      } else if (daysLeft === 0) {
-        body = `Bugün "${appointment.note}" randevunuz var.`;
-      } else {
-        continue; // sadece bugün ve yarına ait bildirim gönder
+      const userData = userDoc.data();
+      const fcmToken = userData?.fcmToken;
+      
+      if (!fcmToken) {
+        console.log(`FCM token bulunamadı: ${userId}`);
+        continue;
       }
 
-      const message = {
+      // Bildirim içeriği
+      const apptDate = appointment.appointmentDate.toDate();
+      const diffDays = Math.floor((apptDate - today) / oneDay);
+      
+      let title, body;
+      if (diffDays === 0) {
+        title = "Randevu Bugün!";
+        body = `"${appointment.note}" randevunuz bugün.`;
+      } else if (diffDays === 1) {
+        title = "Randevu Yarın!";
+        body = `"${appointment.note}" randevunuz yarın.`;
+      } else {
+        continue;
+      }
+
+      // FCM gönderimi
+      await messaging.send({
         token: fcmToken,
-        notification: {
-          title: title,
-          body: body,
-        },
+        notification: { title, body },
         data: {
           appointmentId: doc.id,
-          type: 'appointment_reminder',
-        },
-      };
-
-      await messaging.send(message);
+          type: 'appointment_reminder'
+        }
+      });
       console.log(`Bildirim gönderildi: ${userId} - ${body}`);
     }
-
   } catch (error) {
-    console.error('Cron job hata:', error);
+    console.error('Cron job hatası:', error);
   }
 });
 
