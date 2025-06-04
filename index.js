@@ -72,8 +72,8 @@ app.post('/sendNotification', async (req, res) => {
 
 // --- 1 gün öncesi ve gününde hatırlatma göndermek için cron job ---
 
-// Her gün saat 09:00'da çalışsın
-cron.schedule('09 * * * ', async () => {
+// Her gün saat 00:00'da çalışsın
+cron.schedule('0 0 * * *' , async () => {
   console.log('Hatırlatıcı kontrolü başladı:', new Date());
 
   try {
