@@ -51,6 +51,15 @@ app.post('/sendNotification', async (req, res) => {
     } else if (data.type === 'comment') {
       notificationTitle = "Yeni Yorum";
       notificationBody = `${data.senderName} yorum yaptı`;
+    }else if (data.type === 'request_sent') {
+      notificationTitle = "Yeni Talep";
+      notificationBody = `${data.senderName} ilanınıza talep gönderdi`;
+    } else if (data.type === 'request_accepted') {
+      notificationTitle = "Talep Onaylandı";
+      notificationBody = data.content || "Talebiniz kabul edildi";
+    } else if (data.type === 'request_rejected') {
+      notificationTitle = "Talep Reddedildi";
+      notificationBody = data.content || "Talebiniz reddedildi";
     }
 
     const message = {
